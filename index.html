@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MOS Z-Arena | Quizizz Style</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap');
+
+        :root {
+            --bg-color: #2d033b; /* Tím đậm Quizizz */
+            --card-bg: #460073;
+            --text-color: #ffffff;
+            --btn-red: #e21b3c;
+            --btn-blue: #1368ce;
+            --btn-yellow: #d89e00;
+            --btn-green: #26890c;
+            --shadow: 0 6px 0 rgba(0,0,0,0.2);
+        }
+
+        body {
+            font-family: 'Quicksand', sans-serif;
+            background-color: var(--bg-color);
+            background-image: radial-gradient(circle at 20% 20%, #810ca8 0%, transparent 20%), 
+                              radial-gradient(circle at 80% 80%, #c147e9 0%, transparent 20%);
+            color: var(--text-color);
+            margin: 0;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            user-select: none;
+        }
+
+        /* --- SCREENS --- */
+        .screen {
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            top: 0; left: 0;
+            transition: opacity 0.5s;
+        }
+
+        .active { display: flex; animation: fadeIn 0.5s; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+
+        /* --- LOBBY --- */
+        .logo { font-size: 3rem; font-weight: 800; text-shadow: 0 0 10px #c147e9; margin-bottom: 20px; }
+        .input-name {
+            padding: 15px; border-radius: 10px; border: none; width: 300px;
+            font-size: 1.2rem; text-align: center; margin-bottom: 20px;
+            font-family: inherit;
+        }
+        .btn-start {
+            background: var(--btn-green); color: white; padding: 15px 40px;
+            border-radius: 8px; border: none; font-size: 1.5rem; font-weight: bold;
+            box-shadow: 0 6px 0 #1a5c06; cursor: pointer; transition: transform 0.1s;
+        }
+        .btn-start:active { transform: translateY(6px); box-shadow: none; }
+
+        /* --- GAME UI --- */
+        .top-bar {
+            position: absolute; top: 0; width: 100%; padding: 15px;
+            display: flex; justify-content: space-between; box-sizing: border-box;
+            background: rgba(0,0,0,0.3); font-size: 1.2rem; font-weight: bold;
+        }
+
+        .timer-bar {
+            width: 100%; height: 10px; background: rgba(255,255,255,0.2);
+            position: absolute; top: 60px;
+        }
+        .timer-fill {
+            height: 100%; background: linear-gradient(90deg, #00f260, #0575e6);
+            width: 100%; transition: width 1s linear;
+        }
+
+        .question-card {
+            background: white; color: #333; width: 90%; max-width: 800px;
+            padding: 20px; border-radius: 15px; text-align: center;
+            margin-bottom: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            margin-top: 50px;
+        }
+        
+        .excel-view {
+            font-family: monospace; background: #e6f2ea; border: 1px solid #ccc;
+            display: inline-block; padding: 10px; margin-top: 10px; border-radius: 5px;
+            width: 100%; box-sizing: border-box; overflow-x: auto;
+        }
+        .excel-view table { border-collapse: collapse; width: 100%; background: white; }
+        .excel-view th, .excel-view td { border: 1px solid #ccc; padding: 5px; text-align: center; }
+        .excel-view th { background: #f3f3f3; }
+        .target-cell { background: #fffacd; border: 2px solid #e21b3c !important; font-weight: bold; }
+
+        .options-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 15px;
+            width: 90%; max-width: 800px;
+        }
+
+        .option-btn {
+            padding: 20px; border-radius: 10px; border: none;
+            color: white; font-size: 1.1rem; font-weight: bold; cursor: pointer;
+            text-align: left; display: flex; align-items: center;
+            box-shadow: 0 6px 0 rgba(0,0,0,0.2); transition: transform 0.1s;
+            position: relative; overflow: hidden;
+            font-family: 'Consolas', monospace;
+        }
+        .option-btn:active { transform: translateY(6px); box-shadow: none; }
+        .option-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .opt-1 { background: var(--btn-blue); box-shadow: 0 6px 0 #0c4b96; }
+        .opt-2 { background: var(--btn-green); box-shadow: 0 6px 0 #1a5c06; }
+        .opt-3 { background: var(--btn-yellow); box-shadow: 0 6px 0 #9c7200; }
+        .opt-4 { background: var(--btn-red); box-shadow: 0 6px 0 #a31029; }
+
+        /* Power Ups */
+        .powerups {
+            display: flex; gap: 10px; margin-bottom: 15px;
+        }
+        .pu-btn {
+            width: 50px; height: 50px; border-radius: 50%; border: none;
+            background: white; font-size: 1.5rem; cursor: pointer;
+            box-shadow: 0 4px 0 #ccc; transition: all 0.2s;
+        }
+        .pu-btn:active { transform: translateY(4px); box-shadow: none; }
+        .pu-btn.used { opacity: 0.3; filter: grayscale(1); cursor: default; }
+
+        /* --- MEME OVERLAY --- */
+        .meme-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); z-index: 100;
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .meme-content { text-align: center; animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .meme-emoji { font-size: 8rem; margin-bottom: 20px; display: block; }
+        .meme-text { font-size: 2rem; font-weight: bold; color: white; text-transform: uppercase; }
+        .meme-score { font-size: 1.5rem; color: #ffd700; margin-top: 10px; }
+
+        /* Leaderboard simulated */
+        .rank-badge {
+            background: rgba(255,255,255,0.2); padding: 5px 15px; border-radius: 20px;
+            font-size: 0.9rem; display: flex; align-items: center; gap: 5px;
+        }
+
+        @keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
+
+    </style>
+</head>
+<body>
+
+    <div class="screen active" id="screenLobby">
+        <div class="logo">MOS Z-ARENA ⚡</div>
+        <p>Ôn luyện Excel phong cách Speed Run</p>
+        <input type="text" id="playerName" class="input-name" placeholder="Nhập tên của bạn..." value="Học Sinh Giỏi">
+        <button class="btn-start" onclick="startGame()">VÀO GAME 🚀</button>
+        <p style="font-size: 0.8rem; opacity: 0.7; margin-top: 20px;">Lưu ý: Bật âm thanh để có trải nghiệm tốt nhất 🔊</p>
+    </div>
+
+    <div class="screen" id="screenGame">
+        <div class="top-bar">
+            <div class="rank-badge">🏆 Hạng: <span id="rankDisplay">15/50</span></div>
+            <div>🔥 <span id="streakDisplay">0</span></div>
+            <div>💎 <span id="scoreDisplay">0</span></div>
+        </div>
+        
+        <div class="timer-bar"><div class="timer-fill" id="timerBar"></div></div>
+
+        <div class="question-card">
+            <div id="questionText" style="font-size: 1.1rem; font-weight: bold; margin-bottom: 10px;">Loading...</div>
+            <div class="excel-view" id="tableArea"></div>
+        </div>
+
+        <div class="powerups">
+            <button class="pu-btn" id="pu5050" onclick="use5050()" title="50/50">✂️</button>
+            <button class="pu-btn" id="puFreeze" onclick="useFreeze()" title="Đóng băng thời gian">❄️</button>
+        </div>
+
+        <div class="options-grid" id="optionsGrid">
+            </div>
+    </div>
+
+    <div class="meme-overlay" id="memeScreen">
+        <div class="meme-content">
+            <span class="meme-emoji" id="memeEmoji">😎</span>
+            <div class="meme-text" id="memeText">CHÍNH XÁC!</div>
+            <div class="meme-score" id="memePoints">+1000 điểm</div>
+        </div>
+    </div>
+
+    <div class="screen" id="screenEnd">
+        <div class="logo">TỔNG KẾT</div>
+        <div style="font-size: 4rem; margin-bottom: 20px;">🏆</div>
+        <h2 id="finalRank">Hạng: 1/50</h2>
+        <h3 id="finalScore">Điểm: 0</h3>
+        <p>Độ chính xác: <span id="finalAccuracy">0%</span></p>
+        <button class="btn-start" onclick="location.reload()">CHƠI LẠI 🔄</button>
+    </div>
+
+<script>
+    // --- AUDIO SYSTEM (No external files) ---
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // Synth Sound Effects
+    function playSound(type) {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        const now = audioCtx.currentTime;
+        
+        if (type === 'correct') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(440, now);
+            osc.frequency.exponentialRampToValueAtTime(880, now + 0.1);
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+            osc.start(now);
+            osc.stop(now + 0.3);
+        } else if (type === 'wrong') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.linearRampToValueAtTime(100, now + 0.3);
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+            osc.start(now);
+            osc.stop(now + 0.3);
+        } else if (type === 'bgm_beat') {
+            // Simple kick drum
+            osc.frequency.setValueAtTime(100, now);
+            osc.frequency.exponentialRampToValueAtTime(0.01, now + 0.5);
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+            osc.start(now);
+            osc.stop(now + 0.5);
+        }
+    }
+
+    // Simple Background Loop
+    let bgmInterval;
+    function startMusic() {
+        if(bgmInterval) clearInterval(bgmInterval);
+        bgmInterval = setInterval(() => {
+            playSound('bgm_beat');
+        }, 1000); // 60 BPM beat
+    }
+    function stopMusic() {
+        clearInterval(bgmInterval);
+    }
+
+    // --- GAME DATA ---
+    const questions = [
+        {
+            q: "Tính TỔNG cột Lương (C2:C4).",
+            t: [["1", "Tên", "Phòng", "Lương"], ["2", "A", "IT", "10"], ["3", "B", "HR", "20"], ["4", "C", "IT", "30"]],
+            opts: ["=SUM(C2:C4)", "=TOTAL(C2:C4)", "=COUNT(C2:C4)", "=ADD(C2:C4)"],
+            correct: 0
+        },
+        {
+            q: "Tìm giá trị LỚN NHẤT trong cột Điểm.",
+            t: [["1", "Tên", "Điểm"], ["2", "An", "9"], ["3", "Ba", "8"], ["4", "Tu", "10"]],
+            opts: ["=MAXIMUM(B2:B4)", "=HIGH(B2:B4)", "=MAX(B2:B4)", "=LARGE(B2:B4, 1)"], // MAX and LARGE are valid but MAX is standard
+            correct: 2 // index 2 is MAX
+        },
+        {
+            q: "Nếu ĐTB >= 5 thì 'Đậu', còn lại 'Rớt'.",
+            t: [["1", "ĐTB", "KQ"], ["2", "4.5", "?"]],
+            opts: ["=IF(A2>=5;'Đậu';'Rớt')", "=IF(A2>5,'Đậu','Rớt')", "=IIF(A2>=5,'Đậu','Rớt')", "=CHECK(A2>=5)"],
+            correct: 0
+        },
+        {
+            q: "Lấy 2 ký tự TRÁI của mã SP 'IP-14'.",
+            t: [["1", "Mã", "KQ"], ["2", "IP-14", "?"]],
+            opts: ["=LEFT(A2;2)", "=RIGHT(A2;2)", "=MID(A2;1;2)", "=TRIM(A2)"],
+            correct: 0
+        },
+        {
+            q: "Đếm số nhân viên phòng 'IT'.",
+            t: [["1", "Tên", "Phòng"], ["2", "A", "IT"], ["3", "B", "Sale"], ["4", "C", "IT"]],
+            opts: ["=COUNT(B2:B4;'IT')", "=SUMIF(B2:B4;'IT')", "=COUNTIF(B2:B4;'IT')", "=DCOUNT(B2:B4)"],
+            correct: 2
+        }
+    ];
+
+    // --- GAME LOGIC ---
+    let currentQ = 0;
+    let score = 0;
+    let streak = 0;
+    let rank = 50; // Start at rank 50
+    let timerWidth = 100;
+    let timerInterval;
+    let isFrozen = false;
+    let correctCount = 0;
+
+    const memeWin = [
+        {e:"😎", t:"QUÁ ĐẲNG CẤP!"}, {e:"🔥", t:"CHÁY QUÁ BẠN ƠI!"}, {e:"🧠", t:"BIG BRAIN TIME!"}, {e:"🚀", t:"TO THE MOON!"}
+    ];
+    const memeLose = [
+        {e:"💀", t:"SAI RỒI!"}, {e:"😭", t:"BUỒN QUÁ!"}, {e:"🐢", t:"CHẬM LẠI MỘT CHÚT!"}, {e:"🤡", t:"KHÔNG SAO LÀM LẠI!"}
+    ];
+
+    function renderTable(data) {
+        let h = '<table>';
+        data.forEach((r, i) => {
+            h += '<tr>';
+            r.forEach((c) => {
+                h += `<td>${c}</td>`;
+            });
+            h += '</tr>';
+        });
+        h += '</table>';
+        return h;
+    }
+
+    function shuffle(array) {
+        return array.sort(() => Math.random() - 0.5);
+    }
+
+    function startGame() {
+        document.getElementById('screenLobby').classList.remove('active');
+        document.getElementById('screenGame').classList.add('active');
+        startMusic();
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        if (currentQ >= questions.length) {
+            endGame();
+            return;
+        }
+
+        const qData = questions[currentQ];
+        document.getElementById('questionText').innerText = qData.q;
+        document.getElementById('tableArea').innerHTML = renderTable(qData.t);
+        
+        // Reset Timer
+        timerWidth = 100;
+        isFrozen = false;
+        document.getElementById('timerBar').style.width = '100%';
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            if(!isFrozen) {
+                timerWidth -= 1; // Drain speed
+                document.getElementById('timerBar').style.width = timerWidth + '%';
+                if(timerWidth <= 0) handleAnswer(-1); // Time out
+            }
+        }, 100); // 100ms * 100 steps = 10s per question roughly
+
+        // Render Options (Randomize positions but keep track of correct one)
+        const optsGrid = document.getElementById('optionsGrid');
+        optsGrid.innerHTML = '';
+        
+        // Create an array of objects to shuffle: { text: "...", isCorrect: true/false }
+        let btnData = qData.opts.map((txt, idx) => ({ txt, isCorrect: idx === qData.correct }));
+        btnData = shuffle(btnData);
+
+        const colors = ['opt-1', 'opt-2', 'opt-3', 'opt-4'];
+        
+        btnData.forEach((d, i) => {
+            const btn = document.createElement('button');
+            btn.className = `option-btn ${colors[i]}`;
+            btn.innerText = d.txt;
+            btn.dataset.isCorrect = d.isCorrect;
+            btn.onclick = () => handleAnswer(d.isCorrect);
+            optsGrid.appendChild(btn);
+        });
+
+        // Update Rank artificially
+        document.getElementById('rankDisplay').innerText = `${rank}/${50 + currentQ*10}`;
+    }
+
+    function handleAnswer(isCorrect) {
+        clearInterval(timerInterval);
+        const memeScreen = document.getElementById('memeScreen');
+        const mEmoji = document.getElementById('memeEmoji');
+        const mText = document.getElementById('memeText');
+        const mPoints = document.getElementById('memePoints');
+
+        memeScreen.style.display = 'flex';
+
+        if (isCorrect === true) {
+            playSound('correct');
+            streak++;
+            correctCount++;
+            
+            // Calc Score: Base 600 + Speed Bonus (max 400) + Streak Bonus
+            const speedBonus = Math.floor(timerWidth * 4); 
+            const streakBonus = streak * 50;
+            const roundScore = 600 + speedBonus + streakBonus;
+            score += roundScore;
+            
+            // Rank up
+            if(rank > 1) rank = Math.max(1, rank - Math.floor(Math.random() * 5 + 3));
+
+            // Meme Setup
+            const m = memeWin[Math.floor(Math.random() * memeWin.length)];
+            mEmoji.innerText = m.e;
+            mText.innerText = m.t;
+            mPoints.innerText = `+${roundScore}`;
+            mPoints.style.color = '#00ff00';
+            
+            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+        } else {
+            playSound('wrong');
+            streak = 0;
+            // Rank down
+            rank = Math.min(100, rank + Math.floor(Math.random() * 5));
+
+            const m = memeLose[Math.floor(Math.random() * memeLose.length)];
+            mEmoji.innerText = m.e;
+            mText.innerText = isCorrect === -1 ? "HẾT GIỜ!" : m.t;
+            mPoints.innerText = "+0";
+            mPoints.style.color = '#ff0000';
+        }
+
+        // Update UI
+        document.getElementById('scoreDisplay').innerText = score;
+        document.getElementById('streakDisplay').innerText = streak;
+        document.getElementById('rankDisplay').innerText = `${rank}/100`;
+
+        // Wait then next
+        setTimeout(() => {
+            memeScreen.style.display = 'none';
+            currentQ++;
+            loadQuestion();
+        }, 2000);
+    }
+
+    // --- POWER UPS ---
+    function use5050() {
+        const btn = document.getElementById('pu5050');
+        if(btn.classList.contains('used')) return;
+        
+        const opts = Array.from(document.querySelectorAll('.option-btn'));
+        const wrongOpts = opts.filter(b => b.dataset.isCorrect === "false");
+        
+        // Hide 2 wrong options
+        if(wrongOpts.length >= 2) {
+            wrongOpts[0].style.visibility = 'hidden';
+            wrongOpts[1].style.visibility = 'hidden';
+        }
+        
+        btn.classList.add('used');
+    }
+
+    function useFreeze() {
+        const btn = document.getElementById('puFreeze');
+        if(btn.classList.contains('used')) return;
+
+        isFrozen = true;
+        document.getElementById('timerBar').style.background = '#00ffff'; // Ice color
+        
+        setTimeout(() => {
+            isFrozen = false;
+            document.getElementById('timerBar').style.background = 'linear-gradient(90deg, #00f260, #0575e6)';
+        }, 5000); // Freeze 5s
+
+        btn.classList.add('used');
+    }
+
+    function endGame() {
+        stopMusic();
+        document.getElementById('screenGame').classList.remove('active');
+        document.getElementById('screenEnd').classList.add('active');
+        
+        document.getElementById('finalScore').innerText = score;
+        document.getElementById('finalRank').innerText = rank === 1 ? "HẠNG NHẤT 🏆" : `Hạng: ${rank}`;
+        const acc = Math.round((correctCount / questions.length) * 100);
+        document.getElementById('finalAccuracy').innerText = `${acc}%`;
+
+        if(acc > 80) confetti({ particleCount: 300, spread: 100, origin: { y: 0.6 } });
+    }
+
+</script>
+</body>
+</html>
