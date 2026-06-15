@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <script>
+      // Early robust safeguard to prevent "TypeError: Cannot set property fetch which has only a getter"
+      (function() {
+        try {
+          var realFetch = window.fetch;
+          Object.defineProperty(window, 'fetch', {
+            get: function() { return realFetch; },
+            set: function(val) { realFetch = val; },
+            configurable: true,
+            enumerable: true
+          });
+        } catch (e) {
+          console.warn('[ChemStation] fetch safeguard setup ignored:', e);
+        }
+      })();
+    </script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ChemStation AI - Trợ Lý Bảng Tuần Hoàn Phygital</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./src/main.tsx"></script>
+  </body>
+</html>
+
