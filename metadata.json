@@ -1,0 +1,6 @@
+{
+  "name": "ChemStation AI",
+  "description": "An interactive Virtual Assistant and Chemistry Tutor designed for the Phygital Periodic Table system, recognizing spoken inquiries and managing visual animations.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
